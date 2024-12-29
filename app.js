@@ -28,10 +28,18 @@ const swaggerOptions = {
 
 // 移除 www 并重定向
 app.use((req, res, next) => {
-  const host = req.get("host");
-  if (host && host.startsWith("www.")) {
-    const newHost = host.slice(4);
-    return res.redirect(`${req.protocol}://${newHost}${req.originalUrl}`);
+  const host = req.hostname;
+  const protocol = req.protocol;
+
+  const cleanHost = host.replace(/^www\./, "");
+  const prefix = process.env.HTTPS === "true" ? "https" : "http";
+  const isLocalhost = ["localhost", "127.0.0.1"].includes(host);
+
+  // 检查是否需要重定向
+  const shouldRedirect = host.startsWith("www.") || protocol !== prefix;
+
+  if (!isLocalhost && shouldRedirect) {
+    return res.redirect(`${prefix}://${cleanHost}${req.originalUrl}`);
   }
   next();
 });

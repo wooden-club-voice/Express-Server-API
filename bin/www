@@ -6,10 +6,13 @@ const fs = require("fs");
 const http = require("node:http");
 const https = require("node:https");
 
-const httpPort = normalizePort(process.env.HTTP_PORT || "8080");
-const httpsPort = normalizePort(process.env.HTTPS_PORT || "443");
+const port =
+  process.env.HTTPS === "true"
+    ? normalizePort(process.env.HTTPS_PORT)
+    : normalizePort(process.env.HTTP_PORT);
 
-// 创建 HTTPS 服务器
+let server = null;
+
 if (process.env.HTTPS === "true") {
   // SSL证书配置
   const credentials = {
@@ -17,30 +20,14 @@ if (process.env.HTTPS === "true") {
     cert: fs.readFileSync(process.env.SSL_CERT_PATH),
   };
 
-  const httpsServer = https.createServer(credentials, app);
-  httpsServer.listen(httpsPort);
-  httpsServer.on("error", onError.bind(null, httpsPort));
-  httpsServer.on("listening", onListening.bind(null, httpsServer));
+  server = https.createServer(credentials, app);
+} else {
+  server = http.createServer(app);
 }
 
-// 创建 HTTP 服务器 (用于重定向)
-const httpApp =
-  process.env.HTTPS === "true"
-    ? (req, res) => {
-        const host = req.headers.host.startsWith("www.")
-          ? req.headers.host.slice(4)
-          : req.headers.host;
-
-        res.writeHead(301, {
-          Location: `https://${host}${req.url}`,
-        });
-        res.end();
-      }
-    : app;
-const httpServer = http.createServer(httpApp);
-httpServer.listen(httpPort);
-httpServer.on("error", onError.bind(null, httpPort));
-httpServer.on("listening", onListening.bind(null, httpServer));
+server.listen(port);
+server.on("error", onError.bind(null, port));
+server.on("listening", onListening.bind(null, server));
 
 function normalizePort(val) {
   const port = parseInt(val, 10);
@@ -65,7 +52,6 @@ function onError(port, error) {
 
   const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
-  // handle specific listen errors with friendly messages
   switch (error.code) {
     case "EACCES":
       console.error(bind + " requires elevated privileges");
