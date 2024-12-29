@@ -27,8 +27,12 @@ if (process.env.HTTPS === "true") {
 const httpApp =
   process.env.HTTPS === "true"
     ? (req, res) => {
+        const host = req.headers.host.startsWith("www.")
+          ? req.headers.host.slice(4)
+          : req.headers.host;
+
         res.writeHead(301, {
-          Location: `https://${req.headers.host}${req.url}`,
+          Location: `https://${host}${req.url}`,
         });
         res.end();
       }

@@ -26,6 +26,16 @@ const swaggerOptions = {
   },
 };
 
+// 移除 www 并重定向
+app.use((req, res, next) => {
+  const host = req.get("host");
+  if (host && host.startsWith("www.")) {
+    const newHost = host.slice(4);
+    return res.redirect(`${req.protocol}://${newHost}${req.originalUrl}`);
+  }
+  next();
+});
+
 // 模板引擎
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
@@ -69,7 +79,9 @@ loadRoutes(app, path.join(__dirname, "routes"), "/api");
 
 // 数据库连接
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/express-server")
+  .connect(
+    process.env.MONGODB_URI || "mongodb://localhost:27017/express-server"
+  )
   .then(async () => {
     console.log("MongoDB 连接成功!");
 
